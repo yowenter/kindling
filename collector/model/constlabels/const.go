@@ -48,6 +48,8 @@ const (
 	Container       = "container"
 	Ip              = "ip"
 	Port            = "port"
+	ArmsPid			= "app_id"
+	DataSource 		= "data_source"
 
 	RequestContent  = "request_content"
 	ResponseContent = "response_content"

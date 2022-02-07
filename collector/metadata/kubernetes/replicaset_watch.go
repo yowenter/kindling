@@ -19,6 +19,7 @@ const(
 	ReplicaSetKind = "ReplicaSet"
 	ArmsAppEnable = "ArmsAppEnable"
 	ArmsAppName = "ArmsAppName"
+	ArmsAppDisabled = "on"
 )
 
 type ReplicaSetMap struct {

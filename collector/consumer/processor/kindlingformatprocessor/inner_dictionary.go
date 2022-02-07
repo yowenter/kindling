@@ -113,6 +113,9 @@ func TopologyTraceK8sInfo(cfg *Config, g *gauges) {
 	g.targetLabels.AddStringValue(constlabels.SrcWorkloadName, g.Labels.GetStringValue(constlabels.SrcWorkloadName))
 	g.targetLabels.AddStringValue(constlabels.SrcService, g.Labels.GetStringValue(constlabels.SrcService))
 	g.targetLabels.AddStringValue(constlabels.SrcPod, g.Labels.GetStringValue(constlabels.SrcPod))
+	if g.Labels.GetStringValue(constlabels.ArmsPid) != "" {
+		g.targetLabels.AddStringValue(constlabels.ArmsPid, g.Labels.GetStringValue(constlabels.ArmsPid))
+	}
 
 	g.targetLabels.AddStringValue(constlabels.DstNode, g.Labels.GetStringValue(constlabels.DstNode))
 	g.targetLabels.AddStringValue(constlabels.DstNamespace, g.Labels.GetStringValue(constlabels.DstNamespace))
@@ -130,6 +133,10 @@ func TopologyK8sInfo(cfg *Config, g *gauges) {
 		g.targetLabels.AddStringValue(constlabels.SrcWorkloadKind, g.Labels.GetStringValue(constlabels.SrcWorkloadKind))
 		g.targetLabels.AddStringValue(constlabels.SrcWorkloadName, g.Labels.GetStringValue(constlabels.SrcWorkloadName))
 		g.targetLabels.AddStringValue(constlabels.SrcService, g.Labels.GetStringValue(constlabels.SrcService))
+
+		if g.Labels.GetStringValue(constlabels.ArmsPid) != "" {
+			g.targetLabels.AddStringValue(constlabels.ArmsPid, g.Labels.GetStringValue(constlabels.ArmsPid))
+		}
 
 		g.targetLabels.AddStringValue(constlabels.DstNamespace, g.Labels.GetStringValue(constlabels.DstNamespace))
 		g.targetLabels.AddStringValue(constlabels.DstWorkloadKind, g.Labels.GetStringValue(constlabels.DstWorkloadKind))

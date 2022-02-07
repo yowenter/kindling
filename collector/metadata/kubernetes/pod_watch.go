@@ -22,6 +22,7 @@ type PodInfo struct {
 	Labels       map[string]string
 	Namespace    string
 	ContainerIds []string
+	ArmsInfo *ArmsInfo
 }
 
 type podMap struct {
@@ -122,6 +123,10 @@ func onAdd(obj interface{}) {
 	workloadTypeTmp := ""
 	workloadNameTmp := ""
 
+	// 先默认从pod的Labels中取
+	armsEnable := pod.Labels["ArmsAppEnable"] != ArmsAppDisabled
+	armsAppName := pod.Labels[ArmsAppName]
+
 	for _, owner := range pod.OwnerReferences {
 		// only care about the controller
 		if owner.Controller == nil || *owner.Controller != true {
@@ -135,6 +140,13 @@ func onAdd(obj interface{}) {
 			if workload, ok := globalRsInfo.GetReplicaSetInfo(mapKey(pod.Namespace, owner.Name)); ok {
 				workloadTypeTmp = CompleteGVK(workload.APIVersion, strings.ToLower(workload.Kind))
 				workloadNameTmp = workload.Name
+				// 如果ReplicaSet中有配置Arms相关参数，则覆盖Pod的配置
+				if enabled, ok := workload.Labels[ArmsAppEnable]; ok {
+					armsEnable = enabled != ArmsAppDisabled
+				}
+				if appName, ok := workload.Labels[ArmsAppName]; ok {
+					armsAppName = appName
+				}
 				break
 			}
 		}
@@ -159,6 +171,10 @@ func onAdd(obj interface{}) {
 		// Only one of the matched services is cared, here we get the first one
 		serviceInfo = serviceInfoSlice[0]
 	}
+	armsInfo := &ArmsInfo{
+		AppName: armsAppName,
+		Enable:  armsEnable,
+	}
 	var kpi = &K8sPodInfo{
 		Ip:            pod.Status.PodIP,
 		Namespace:     pod.Namespace,
@@ -169,6 +185,7 @@ func onAdd(obj interface{}) {
 		NodeAddress:   pod.Status.HostIP,
 		isHostNetwork: pod.Spec.HostNetwork,
 		ServiceInfo:   serviceInfo,
+		ArmsInfo: armsInfo,
 	}
 
 	// Add containerId map
@@ -205,6 +222,7 @@ func onAdd(obj interface{}) {
 			}
 		}
 	}
+	pI.ArmsInfo = armsInfo
 	globalPodInfo.add(&pI)
 }
 

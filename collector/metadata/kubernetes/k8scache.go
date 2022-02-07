@@ -1,15 +1,37 @@
 package kubernetes
 
 import (
+	"bytes"
+	"crypto/md5"
+	"errors"
+	"golang.org/x/text/encoding/simplifiedchinese"
+	"golang.org/x/text/transform"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"reflect"
+	"strconv"
+	"strings"
 	"sync"
+	"unsafe"
 )
 
+var userId string
+var userIdBase36 string
+var appName2appId map[string]string
+var appName2appIdMux sync.RWMutex
+const userIdEnvKey string = "USER_ID"
 type K8sContainerInfo struct {
 	ContainerId string
 	Name        string
 	RefPodInfo  *K8sPodInfo
+}
+
+type ArmsInfo struct {
+	AppName string
+	Enable bool
+	AppId string
 }
 
 type K8sPodInfo struct {
@@ -23,6 +45,7 @@ type K8sPodInfo struct {
 	NodeAddress   string
 	isHostNetwork bool
 	ServiceInfo   *K8sServiceInfo
+	ArmsInfo *ArmsInfo
 }
 
 type K8sServiceInfo struct {
@@ -34,6 +57,112 @@ type K8sServiceInfo struct {
 	// TODO: How to delete the workload info when it is deleted?
 	WorkloadKind string
 	WorkloadName string
+}
+
+// UTF-8 转 GBK
+func Utf8ToGbk(s []byte) ([]byte, error) {
+	reader := transform.NewReader(bytes.NewReader(s), simplifiedchinese.GBK.NewEncoder())
+	d, e := ioutil.ReadAll(reader)
+	if e != nil {
+		return nil, e
+	}
+	return d, nil
+}
+
+// GBK 转 UTF-8
+func GbkToUtf8(s []byte) ([]byte, error) {
+	reader := transform.NewReader(bytes.NewReader(s), simplifiedchinese.GBK.NewDecoder())
+	d, e := ioutil.ReadAll(reader)
+	if e != nil {
+		return nil, e
+	}
+	return d, nil
+}
+
+func init() {
+	appName2appId = make(map[string]string)
+	if uid, ok := os.LookupEnv(userIdEnvKey); ok {
+		userId = uid
+		userIdLong, err := strconv.ParseInt(userId, 10, 64)
+		if err == nil {
+			panic("Parse user_id to long type error. user_id:" + userId + " e:" + err.Error())
+		}
+		userIdBase36 = strconv.FormatInt(userIdLong, 36)
+	} else {
+		panic("Can't get userId from env key USER_ID, please check the resource definition.")
+	}
+}
+
+func String2Bytes(s string) []byte {
+	sh := (*reflect.StringHeader)(unsafe.Pointer(&s))
+	bh := reflect.SliceHeader{
+		Data: sh.Data,
+		Len:  sh.Len,
+		Cap:  sh.Len,
+	}
+	return *(*[]byte)(unsafe.Pointer(&bh))
+}
+
+func Bytes2String(b []byte) string {
+	return *(*string)(unsafe.Pointer(&b))
+}
+
+// CreateArmsApp used to call Arms-Console to add Arms app.
+func CreateArmsApp(appId string) {
+
+}
+
+// DeleteArmsApp used to delete Arms app by requesting Arms-Console.
+func DeleteArmsApp(appId string) {
+
+}
+
+func getAppIdInCache(appName string) (bool, string) {
+	appName2appIdMux.RLock()
+	defer appName2appIdMux.RUnlock()
+	if appId, ok := appName2appId[appName]; ok {
+		return true, appId
+	} else {
+		return false, ""
+	}
+}
+// GetAppIdByAppName implements the same logic as arms Java Agent.
+func GetAppIdByAppName(appName string) (string, error) {
+	if appName == "" {
+		return "", errors.New("appName is empty")
+	}
+	// find in cache
+	if ok, appId := getAppIdInCache(appName); ok {
+		return appId, nil
+	}
+
+	// cache miss
+	appName2appIdMux.Lock()
+	defer appName2appIdMux.Unlock()
+	utfBytes := String2Bytes(appName + "token")
+	gbkBytes, err := Utf8ToGbk(utfBytes)
+	if err != nil {
+		return "", errors.New("convert appName to gbk bytes failed")
+	}
+
+	bytes := md5.Sum(gbkBytes)
+	res := ""
+	for _, byte := range bytes {
+		tmp := strconv.FormatInt(int64(0xFF & byte), 16)
+		if len(tmp) == 1 {
+			res += "0" + tmp
+		} else {
+			res += tmp
+		}
+	}
+	appId := userIdBase36 + "@" + strings.ToLower(res)[:15]
+	appName2appId[appName] = appId
+	return appId, nil
+
+	//md5Str := Bytes2String(bytes[:])
+	//appId := md5Str + "@" + userIdBase36
+	//appName2appId[appName] = appId
+	//return appId
 }
 
 func (s *K8sServiceInfo) emptySelf() {

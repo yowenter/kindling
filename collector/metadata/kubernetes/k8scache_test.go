@@ -90,3 +90,7 @@ func TestK8sMetaDataCache_DeleteServiceByIpPort(t *testing.T) {
 		t.Fatalf("cache is not empty after deleting service")
 	}
 }
+
+func TestGetAppIdByAppName(t *testing.T) {
+	GetAppIdByAppName("国内监控")
+}
