@@ -132,7 +132,7 @@ func onAdd(obj interface{}) {
 			// The owner of Pod is ReplicaSet, and it is Workload such as Deployment for ReplicaSet.
 			// Therefore, find ReplicaSet's name in 'globalRsInfo' to find which kind of workload
 			// the Pod belongs to.
-			if workload, ok := globalRsInfo.GetOwnerReference(mapKey(pod.Namespace, owner.Name)); ok {
+			if workload, ok := globalRsInfo.GetReplicaSetInfo(mapKey(pod.Namespace, owner.Name)); ok {
 				workloadTypeTmp = CompleteGVK(workload.APIVersion, strings.ToLower(workload.Kind))
 				workloadNameTmp = workload.Name
 				break

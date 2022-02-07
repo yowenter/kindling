@@ -13,7 +13,7 @@ func InitGlobalRsInfo() {
 func TestOnAddReplicaSet(t *testing.T) {
 	InitGlobalRsInfo()
 	onAddReplicaSet(CreateReplicaSet())
-	owner, ok := globalRsInfo.GetOwnerReference(mapKey("CustomNamespace", "deploy-1a2b3c4d"))
+	owner, ok := globalRsInfo.GetReplicaSetInfo(mapKey("CustomNamespace", "deploy-1a2b3c4d"))
 	if !ok || owner.Kind != "Deployment" || owner.APIVersion != "apps/v1" {
 		t.Errorf("Error")
 	}

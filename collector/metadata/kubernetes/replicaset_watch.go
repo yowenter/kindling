@@ -15,16 +15,25 @@ import (
 	"sync"
 )
 
-const ReplicaSetKind = "ReplicaSet"
+const(
+	ReplicaSetKind = "ReplicaSet"
+	ArmsAppEnable = "ArmsAppEnable"
+	ArmsAppName = "ArmsAppName"
+)
 
 type ReplicaSetMap struct {
 	// Key is ${namespace}/${name}
-	Info map[string]Controller
+	Info map[string]ReplicaSetInfo
 	mut  sync.RWMutex
 }
 
 var globalRsInfo = newReplicaSetMap()
 var rsUpdateMutex sync.Mutex
+
+type ReplicaSetInfo struct {
+	Controller
+	Labels map[string]string
+}
 
 type Controller struct {
 	Name       string
@@ -34,17 +43,17 @@ type Controller struct {
 
 func newReplicaSetMap() *ReplicaSetMap {
 	return &ReplicaSetMap{
-		Info: make(map[string]Controller),
+		Info: make(map[string]ReplicaSetInfo),
 	}
 }
 
-func (rs *ReplicaSetMap) put(key string, owner Controller) {
+func (rs *ReplicaSetMap) put(key string, rsi ReplicaSetInfo) {
 	rs.mut.Lock()
-	rs.Info[key] = owner
+	rs.Info[key] = rsi
 	rs.mut.Unlock()
 }
 
-func (rs *ReplicaSetMap) GetOwnerReference(key string) (Controller, bool) {
+func (rs *ReplicaSetMap) GetReplicaSetInfo(key string) (ReplicaSetInfo, bool) {
 	rs.mut.RLock()
 	result, ok := rs.Info[key]
 	rs.mut.RUnlock()
@@ -93,7 +102,11 @@ func onAddReplicaSet(obj interface{}) {
 		Kind:       ownerRef.Kind,
 		APIVersion: ownerRef.APIVersion,
 	}
-	globalRsInfo.put(mapKey(rs.Namespace, rs.Name), controller)
+	replicaSetInfo := ReplicaSetInfo{
+		Controller: controller,
+		Labels:     rs.Labels,
+	}
+	globalRsInfo.put(mapKey(rs.Namespace, rs.Name), replicaSetInfo)
 }
 
 func OnUpdateReplicaSet(objOld interface{}, objNew interface{}) {
